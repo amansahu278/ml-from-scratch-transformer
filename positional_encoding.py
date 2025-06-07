@@ -22,9 +22,12 @@ class PositionalEncoding(torch.nn.Module):
         self.pos_enc = self.pos_enc.unsqueeze(
             0
         )  # Add batch dimension (1, max_len, d_model)
+        # This is to ensure that positional encoding moves with the model
+        # and is not a parameter that gets updated during training
+        self.register_buffer("pos_enc", self.pos_enc)
 
     def forward(self, x):
-        print(self.pos_enc[:, : x.size(1), :])
+        # print(self.pos_enc[:, : x.size(1), :])
         seq_len = x.size(1)
         return x + self.pos_enc[:, :seq_len, :]
 

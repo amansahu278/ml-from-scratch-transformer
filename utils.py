@@ -85,4 +85,4 @@ if __name__ == "__main__":
         2,
         seq_len,
         d_model,
-    ), f"Expected output shape {(2, output_dim)}, got {output.shape}"
+    ), f"Expected output shape {(2, d_model)}, got {output.shape}"
