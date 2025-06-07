@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 from utils import Linear
 
+
 class ScaledDotProductAttention(nn.Module):
     def __init__(self, temperature):
         super().__init__()
@@ -65,6 +66,7 @@ class MultiHeadAttention(nn.Module):
         attn = self.linear_out(attn)  # (B, seq_len, d_model)
         return attn
 
+
 if __name__ == "__main__":
     d_model = 512
     n_heads = 8
@@ -79,4 +81,8 @@ if __name__ == "__main__":
 
     output = multi_head_attention(q, k, v)
     print(f"Output shape: {output.shape}")
-    assert output.shape == (batch_size, seq_len, d_model), f"Expected output shape {(batch_size, seq_len, d_model)}, got {output.shape}"
+    assert output.shape == (
+        batch_size,
+        seq_len,
+        d_model,
+    ), f"Expected output shape {(batch_size, seq_len, d_model)}, got {output.shape}"

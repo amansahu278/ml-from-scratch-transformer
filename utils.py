@@ -9,7 +9,7 @@ class Linear(nn.Module):
         # nn.Parameter makes it trainable
         self.w = nn.Parameter(torch.empty(input_dim, output_dim))
         self.b = nn.Parameter(torch.empty(output_dim))
-        
+
         # Initialization (can be other ones too)
         nn.init.xavier_uniform_(self.w)
         nn.init.zeros_(self.b)
@@ -17,12 +17,13 @@ class Linear(nn.Module):
     def forward(self, x):
         return x @ self.w + self.b
 
+
 class LayerNorm(nn.Module):
     def __init__(self, normalized_shape, bias=False, affine=False, eps=1e-5):
         super().__init__()
         self.normalized_shape = normalized_shape
         self.eps = eps
-        
+
         self.affine = affine
         # When afffine, we shift the normalized output by a scale and bias,
         # this allows the model to be flexible in learning
@@ -35,19 +36,19 @@ class LayerNorm(nn.Module):
             self.gamma = None
             self.beta = None
 
-            
     def forward(self, x):
         mean = x.mean(dim=-1, keepdim=True)
 
         # Variance can be biased or unbiased, biased if /n, unbiased if /n-1
         # This is not related to the bias in the layer norm
         var = x.var(dim=-1, keepdim=True, unbiased=False)
-        y = (x - mean)/(torch.sqrt(var + self.eps))
+        y = (x - mean) / (torch.sqrt(var + self.eps))
 
         if self.affine:
             y = y * self.gamma + self.beta
-        
+
         return y
+
 
 class PositionWiseFeedForward(nn.Module):
     def __init__(self, input_dim=512, hidden_dim=2048, output_dim=512):
@@ -56,21 +57,32 @@ class PositionWiseFeedForward(nn.Module):
         self.linear2 = Linear(hidden_dim, output_dim)
 
     def forward(self, x):
+        # X (batch_size, seq_len, d_model)
+        # It is position-wise, since we apply the FFN to each position in seq_len
 
+        # print(f"Input shape: {x.shape}")
         x = self.linear1(x)
+        # print(f"After first linear layer shape: {x.shape}")
         x = torch.relu(x)
         x = self.linear2(x)
-        
+        # print(f"After second linear layer shape: {x.shape}")
+
         return x
 
+
 if __name__ == "__main__":
-    
-    input_dim = 10
-    output_dim = 5
-    linear_layer = Linear(input_dim, output_dim)
-    
-    
-    x = torch.randn(2, input_dim) 
-    
-    output = linear_layer(x)
-    assert output.shape == (2, output_dim), f"Expected output shape {(2, output_dim)}, got {output.shape}"
+
+    seq_len = 10
+    d_model = 512
+
+    x = torch.randn(2, seq_len, d_model)
+
+    pffn = PositionWiseFeedForward(
+        input_dim=d_model, hidden_dim=2048, output_dim=d_model
+    )
+    output = pffn(x)
+    assert output.shape == (
+        2,
+        seq_len,
+        d_model,
+    ), f"Expected output shape {(2, output_dim)}, got {output.shape}"
