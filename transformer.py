@@ -1,3 +1,4 @@
+import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from encoder import Encoder
@@ -30,7 +31,8 @@ class Transformer(nn.Module):
             decoder_output, kv_list = decoder_output
 
         out = self.output_proj(decoder_output)
-        out = F.softmax(out, dim=-1)
+        # Logits are passed to loss function, not probabilities, so removing softmax here
+        # out = F.softmax(out, dim=-1)
 
         # I remember having to use past_key_values when implementing
         # custom KV cache management, so i thought i'd implement it here
@@ -38,6 +40,22 @@ class Transformer(nn.Module):
             return {"logits": out, "past_key_values": kv_list}
         return out
 
-    def generate(self, src, max_len=50):
+    def generate(self, src, sos_token_id=1, max_len=50):
+        self.eval()
 
         encoder_output = self.encoder(src)
+        batch_size = src.size(0)
+        device = src.device
+
+        tgt = torch.full((batch_size, 1), sos_token_id, device=device, dtype=torch.long) # Embedding requires long tensor
+
+        for _ in range(max_len):
+            # We can also call forward here,
+            # But for more customization, say kv_caching etc, it is better to call the decoder instead
+            decoder_output = self.decoder(tgt, encoder_output)
+            logits_for_next_token = self.output_proj(decoder_output[:, -1, :])
+            next_token = torch.argmax(logits_for_next_token, dim=-1, keepdim=True) # The vocab token with the highest value
+
+            tgt = torch.cat([tgt, next_token], dim=1)        
+        
+        return tgt
