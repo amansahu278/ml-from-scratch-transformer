@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from attention import MultiHeadAttention
 from encoder import Encoder
 from positional_encoding import PositionalEncoding
@@ -24,19 +25,26 @@ class DecoderLayer(nn.Module):
         self.pffn = PositionWiseFeedForward(input_dim=d_model, output_dim=d_model)
         self.layer_norm3 = LayerNorm(d_model)
 
-    def forward(self, x, encoder_output):
+    def forward(self, x, encoder_output, return_kv=False):
         seq_len = x.size(1)
         causal_mask = torch.tril(torch.ones((seq_len, seq_len)), device=x.device)
 
         # Masked multi-head attention
-        x = self.mha1(x, x, x, causal_mask) + x
+        x = self.mha1(x, x, x, causal_mask, return_kv) + x
+        if return_kv:
+            x, (k1, v1) = x
         x = self.layer_norm1(x)
 
-        x = self.mha2(q=x, k=encoder_output, v=encoder_output) + x
+        x = self.mha2(q=x, k=encoder_output, v=encoder_output, return_kv=return_kv) + x
+        if return_kv:
+            x, (k2, v2) = x
         x = self.layer_norm2(x)
 
         x = self.pffn(x) + x
         x = self.layer_norm3(x)
+
+        if return_kv:
+            return x, (k1, v1, k2, v2)
         return x
 
 
@@ -55,13 +63,20 @@ class Decoder(nn.Module):
             [DecoderLayer(input_dim, d_model, n_heads) for _ in range(num_layers)]
         )
 
-    def forward(self, x, encoder_output):
+    def forward(self, x, encoder_output, return_kv=False):
         x = self.embedding(x)
         x = self.positional_encoding(x)
 
-        for layer in self.decoder_layers:
-            x = layer(x, encoder_output)
+        kv_pairs = []
 
+        for layer in self.decoder_layers:
+            x = layer(x, encoder_output, return_kv)
+            if return_kv:
+                x, kv = x
+                kv_pairs.append(kv)
+
+        if return_kv:
+            return x, kv_pairs
         return x
 
 

@@ -39,7 +39,7 @@ class MultiHeadAttention(nn.Module):
         # This is how the relations between the heads are learned
         self.linear_out = Linear(d_model, d_model)
 
-    def forward(self, q, k, v, mask=None):
+    def forward(self, q, k, v, mask=None, return_kv=False, return_attn_probs=False):
         q = self.linear_q(q)  # (B, seq_len, d_model)
         # (B, seq_len, d_model) -> (B, seq_len, n_heads, d_k)
         q = q.view(q.size(0), q.size(1), self.n_heads, self.d_k)
@@ -64,6 +64,8 @@ class MultiHeadAttention(nn.Module):
 
         # Output linear layer
         attn = self.linear_out(attn)  # (B, seq_len, d_model)
+        if return_kv:
+            return attn, (k, v)
         return attn
 
 

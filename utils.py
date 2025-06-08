@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 
 
 class Linear(nn.Module):
@@ -63,7 +64,8 @@ class PositionWiseFeedForward(nn.Module):
         # print(f"Input shape: {x.shape}")
         x = self.linear1(x)
         # print(f"After first linear layer shape: {x.shape}")
-        x = torch.relu(x)
+        # F is recommended to be used
+        x = F.relu(x)
         x = self.linear2(x)
         # print(f"After second linear layer shape: {x.shape}")
 
